@@ -87,6 +87,8 @@ int main(int argc, char *argv[])
     }
     HMIMap hmi_map(argv[1]);
     auto startPoint = hmi_map.getStartPoint();
+    auto endPoint = hmi_map.getEndPoint();
+
     MouseContext mouseContext = {Camera(glm::vec3(startPoint[0], startPoint[1], startPoint[2]+10))};
 
     // glfw: initialize and configure
@@ -296,6 +298,10 @@ void processInput(GLFWwindow *window, float deltaTime, Camera &camera)
         camera.ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         camera.ProcessKeyboard(RIGHT, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+        camera.ProcessKeyboard(UP, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS)
+        camera.ProcessKeyboard(DOWN, deltaTime);
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes

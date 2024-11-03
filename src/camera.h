@@ -9,7 +9,9 @@ enum Camera_Movement {
   FORWARD,
   BACKWARD,
   LEFT,
-  RIGHT
+  RIGHT,
+  UP,
+  DOWN
 };
 
 class Camera {
@@ -32,6 +34,10 @@ class Camera {
           position_ -= right_ * velocity;
         if (direction == RIGHT)
           position_ += right_ * velocity;
+        if (direction == UP)
+          position_ += up_ * velocity;
+        if (direction == DOWN)
+          position_ -= up_ * velocity;
     }
   void ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch = true)
     {
