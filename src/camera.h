@@ -16,11 +16,14 @@ enum Camera_Movement {
 
 class Camera {
   public:
-    Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), float yaw = -90.0f, float pitch = 0.0f) {
+    Camera(glm::vec3 position, glm::vec3 target) {
       position_ = position;
-      yaw_ = yaw;
-      pitch_ = pitch;
-      updateCameraVectors();
+      auto front = target - position;
+
+      front_ = glm::normalize(front);
+      right_ = glm::normalize(glm::cross(front_, worldUp_));
+      up_ = glm::normalize(glm::cross(right_, front_));
+
     }
 
     void ProcessKeyboard(Camera_Movement direction, float deltaTime)
@@ -39,53 +42,38 @@ class Camera {
         if (direction == DOWN)
           position_ -= up_ * velocity;
     }
-  void ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch = true)
+  void ProcessMouseMovement(double xoffset, double yoffset)
     {
-      xoffset *= movementSpeed;
-      yoffset *= movementSpeed;
+      auto x_offset = static_cast<float>(xoffset * mouseSensitivity);
+      auto y_offset = static_cast<float>(yoffset * mouseSensitivity);
 
-      yaw_   += xoffset;
-      pitch_ += yoffset;
+      auto target = position_ + front_;
+      target -= right_ * x_offset;
+      target -= up_ * y_offset;
 
-      // make sure that when pitch is out of bounds, screen doesn't get flipped
-      if (constrainPitch)
-      {
-        if (pitch_ > 89.0f)
-          pitch_ = 89.0f;
-        if (pitch_ < -89.0f)
-          pitch_ = -89.0f;
-      }
-      // update Front, Right and Up Vectors using the updated Euler angles
-      updateCameraVectors();
+      glm::vec3 front = target - position_;
+      front_ = glm::normalize(front);
+      right_ = glm::normalize(glm::cross(front_, worldUp_));
+      up_ = glm::normalize(glm::cross(right_, front_));
+
     }
     glm::mat4 GetViewMatrix()
     {
-      return glm::lookAt(position_, position_ + front_, up_);
+      return glm::lookAt(position_, position_ + front_, worldUp_);
     }
     float getZoom() const {
       return zoom;
     }
   private:
-    void updateCameraVectors() {
-      glm::vec3 front;
-      front.x = cos(glm::radians(yaw_)) * cos(glm::radians(pitch_));
-      front.y = sin(glm::radians(pitch_));
-      front.z = sin(glm::radians(yaw_)) * cos(glm::radians(pitch_));
-      front_ = glm::normalize(front);
-      right_ = glm::normalize(glm::cross(front_, worldUp_));
-      up_ = glm::normalize(glm::cross(right_, front_));
-    }
     glm::vec3 position_;
-    float yaw_;
-    float pitch_;
 
     glm::vec3 front_;
     glm::vec3 up_;
     glm::vec3 right_;
 
-    glm::vec3 worldUp_ = glm::vec3(0.0f, 1.0f, 0.0f);
-    float movementSpeed = 7.0f;
-    float mouseSensitivity = 0.05f;
+    glm::vec3 worldUp_ = glm::vec3(0.0f, 0.0f, 1.0f);
+    double movementSpeed = 30.0;
+    double mouseSensitivity = 0.005;
     float zoom = 45.0f;
 };
 

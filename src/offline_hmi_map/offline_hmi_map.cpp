@@ -12,6 +12,7 @@
 using namespace std;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void processInput(GLFWwindow *window, float deltaTime, Camera &camera);
 
@@ -47,9 +48,9 @@ void main()
 
 struct MouseContext {
     Camera camera;
-    float lastX = SCR_WIDTH / 2.0f;
-    float lastY = SCR_HEIGHT / 2.0f;
-    bool firstMouse = true;
+    double lastX = SCR_WIDTH / 2.0;
+    double lastY = SCR_HEIGHT / 2.0f;
+    bool leftMouseButton = false;
 };
 
 
@@ -89,7 +90,8 @@ int main(int argc, char *argv[])
     auto startPoint = hmi_map.getStartPoint();
     auto endPoint = hmi_map.getEndPoint();
 
-    MouseContext mouseContext = {Camera(glm::vec3(startPoint[0], startPoint[1], startPoint[2]+10))};
+    MouseContext mouseContext = {Camera(glm::vec3(startPoint[0], startPoint[1], startPoint[2]+10),
+        glm::vec3(endPoint[0], endPoint[1], endPoint[2]))};
 
     // glfw: initialize and configure
     // ------------------------------
@@ -114,10 +116,11 @@ int main(int argc, char *argv[])
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetWindowUserPointer(window, &mouseContext);
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
 
     // tell GLFW to capture our mouse
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     // glad: load all OpenGL function pointers
     // ---------------------------------------
@@ -290,6 +293,9 @@ void processInput(GLFWwindow *window, float deltaTime, Camera &camera)
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS) {
+        deltaTime = deltaTime * 0.1f;
+    }
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         camera.ProcessKeyboard(FORWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
@@ -313,27 +319,38 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     glViewport(0, 0, width, height);
 }
 
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
+    if (button == GLFW_MOUSE_BUTTON_LEFT) {
+        auto* context = static_cast<MouseContext*>(glfwGetWindowUserPointer(window));
+        if (action == GLFW_PRESS) {
+            if (context) {
+                context->leftMouseButton = true;
+                double xpos, ypos;
+                glfwGetCursorPos(window, &xpos, &ypos);
+                context->lastX = xpos;
+                context->lastY = ypos;
+            }
+        } else if (action == GLFW_RELEASE) {
+            if (context) {
+                context->leftMouseButton = false;
+            }
+        }
+    }
+}
+
 // glfw: whenever the mouse moves, this callback is called
 // -------------------------------------------------------
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 {
     auto* context = static_cast<MouseContext*>(glfwGetWindowUserPointer(window));
-    if (context != nullptr) {
-        float xpos = static_cast<float>(xposIn);
-        float ypos = static_cast<float>(yposIn);
+    if (context != nullptr && context->leftMouseButton) {
 
-        if (context->firstMouse)
-        {
-            context->lastX = xpos;
-            context->lastY = ypos;
-            context->firstMouse = false;
-        }
+        double xoffset = xposIn - context->lastX;
+        double yoffset = context->lastY - yposIn; // reversed since y-coordinates go from bottom to top
 
-        float xoffset = xpos - context->lastX;
-        float yoffset = context->lastY - ypos; // reversed since y-coordinates go from bottom to top
+        context->lastX = xposIn;
+        context->lastY = yposIn;
 
-        context->lastX = xpos;
-        context->lastY = ypos;
 
         context->camera.ProcessMouseMovement(xoffset, yoffset);
     }

@@ -176,15 +176,15 @@ void HMIMap::bindPsdsData(const HMIMap &hmi_map, float floorName,
 
     std::vector<float> colors = {
         0.8f, 0.8f, 0.8f, 1.0f,
-        0.3f, 0.3f, 0.3f, 1.0f,
-        0.3f, 0.3f, 0.3f, 1.0f,
         0.8f, 0.8f, 0.8f, 1.0f,
+        0.3f, 0.3f, 0.3f, 1.0f,
+        0.3f, 0.3f, 0.3f, 1.0f,
     };
     std::vector<float> targetColors = {
         1.0f, 1.0f, 1.0f, 1.0f,
-        1.0f, 0.55f, 0.0f, 1.0f,
-        1.0f, 0.55f, 0.0f, 1.0f,
         1.0f, 1.0f, 1.0f, 1.0f,
+        1.0f, 0.55f, 0.0f, 1.0f,
+        1.0f, 0.55f, 0.0f, 1.0f,
     };
     std::vector<unsigned int> indices = {
         0, 1, 2, 2, 3, 0,
