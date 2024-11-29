@@ -8,6 +8,7 @@
 #include "shader.h"
 #include "camera.h"
 #include "hmi_map/hmi_map.h"
+#include <utils/sql_util.h>
 
 using namespace std;
 
@@ -80,15 +81,49 @@ struct FloorVAO {
     std::vector<unsigned int> roadPointNums;
 };
 
+int callback(void *structure, int argc, char **argv, char **azColName) {
+    auto schema = reinterpret_cast<std::string*>(structure);
+    for(int i = 0; i < argc; i++) {
+        // 这里只关心列的名称和类型，不关心其他信息
+        if (i > 0) *schema += ", ";
+        *schema += azColName[i];
+        *schema += " ";
+        *schema += argv[i] ? argv[i] : "NULL";
+    }
+    return 0;
+}
+
 int main(int argc, char *argv[])
 {
-    if (argc != 2) {
-        cout << "Usage: ./offline_hmi_map <map_file>" << endl;
+    if (argc != 2 && argc != 3) {
+        cout << "Usage: \n./offline_hmi_map <map_file> \n./offline_hmi_map <db_file> <partition_id>" << endl;
         return 1;
     }
-    HMIMap hmi_map(argv[1]);
-    auto startPoint = hmi_map.getStartPoint();
-    auto endPoint = hmi_map.getEndPoint();
+    std::string filename = argv[1];
+    std::size_t dot_pos = filename.rfind('.');
+    if (dot_pos == std::string::npos) {
+        std::cerr << "Error: File with no extension." << std::endl;
+        return 1;
+    }
+    shared_ptr<HMIMap> hmi_map;
+    std::string extension = filename.substr(dot_pos); // 获取文件扩展名
+    if (extension == ".json") {
+        hmi_map = HMIMap::createHmiMap(filename, LoadType::FILE);
+    } else if (extension == ".db") {
+        if (argc != 3) {
+            std::cerr << "Error: .db file provided but no <partition_id> was given." << std::endl;
+            return 1;
+        }
+        int partition_id = atoi(argv[2]);
+        std::string render_data = query_for_render_data(argv[1], partition_id);
+        hmi_map = HMIMap::createHmiMap(render_data, LoadType::STRING);
+    } else {
+        std::cerr << "Error: Unsupported file type. Only .json and .db are allowed." << std::endl;
+        return 1;
+    }
+
+    auto startPoint = hmi_map->getStartPoint();
+    auto endPoint = hmi_map->getEndPoint();
 
     MouseContext mouseContext = {Camera(glm::vec3(startPoint[0], startPoint[1], startPoint[2]+10),
         glm::vec3(endPoint[0], endPoint[1], endPoint[2]))};
@@ -139,14 +174,14 @@ int main(int argc, char *argv[])
     Shader ourShader(vertexShaderSource, fragmentShaderSource); // you can name your shader files however you like
 
     std::vector<FloorVAO> floorVAOs;
-    auto floorNames = hmi_map.getFloorNames();
+    auto floorNames = hmi_map->getFloorNames();
     for (auto floorName : floorNames) {
         FloorVAO floorVAO;
         floorVAO.floorName = floorName;
 
         size_t objNum{};
 
-        objNum = hmi_map.getPillars(floorName).size();
+        objNum = hmi_map->getPillars(floorName).size();
         floorVAO.pillarVAOs.resize(objNum);
         floorVAO.pillarVertexVBOs.resize(objNum);
         floorVAO.pillarColorVBOs.resize(objNum);
@@ -155,10 +190,10 @@ int main(int argc, char *argv[])
         glGenBuffers(objNum, floorVAO.pillarVertexVBOs.data());
         glGenBuffers(objNum, floorVAO.pillarColorVBOs.data());
         glGenBuffers(objNum, floorVAO.pillarEBOs.data());
-        HMIMap::bindPillarsData(hmi_map, floorName,
+        hmi_map->bindPillarsData(floorName,
             floorVAO.pillarVAOs, floorVAO.pillarVertexVBOs, floorVAO.pillarColorVBOs, floorVAO.pillarEBOs);
 
-        objNum = hmi_map.getPsds(floorName).size();
+        objNum = hmi_map->getPsds(floorName).size();
         floorVAO.psdVAOs.resize(objNum);
         floorVAO.psdVertexVBOs.resize(objNum);
         floorVAO.psdColorVBOs.resize(objNum);
@@ -167,10 +202,10 @@ int main(int argc, char *argv[])
         glGenBuffers(objNum, floorVAO.psdVertexVBOs.data());
         glGenBuffers(objNum, floorVAO.psdColorVBOs.data());
         glGenBuffers(objNum, floorVAO.psdEBOs.data());
-        HMIMap::bindPsdsData(hmi_map, floorName,
+        hmi_map->bindPsdsData(floorName,
             floorVAO.psdVAOs, floorVAO.psdVertexVBOs, floorVAO.psdColorVBOs, floorVAO.psdEBOs);
 
-        objNum = hmi_map.getSpeedBumps(floorName).size();
+        objNum = hmi_map->getSpeedBumps(floorName).size();
         floorVAO.speedBumpVAOs.resize(objNum);
         floorVAO.speedBumpVertexVBOs.resize(objNum);
         floorVAO.speedBumpColorVBOs.resize(objNum);
@@ -179,10 +214,10 @@ int main(int argc, char *argv[])
         glGenBuffers(objNum, floorVAO.speedBumpVertexVBOs.data());
         glGenBuffers(objNum, floorVAO.speedBumpColorVBOs.data());
         glGenBuffers(objNum, floorVAO.speedBumpEBOs.data());
-        HMIMap::bindSpeedBumpsData(hmi_map, floorName,
+        hmi_map->bindSpeedBumpsData(floorName,
             floorVAO.speedBumpVAOs, floorVAO.speedBumpVertexVBOs, floorVAO.speedBumpColorVBOs, floorVAO.speedBumpEBOs);
 
-        objNum = hmi_map.getRoads(floorName).size();
+        objNum = hmi_map->getRoads(floorName).size();
         floorVAO.roadVAOs.resize(objNum);
         floorVAO.roadVertexVBOs.resize(objNum);
         floorVAO.roadColorVBOs.resize(objNum);
@@ -191,7 +226,7 @@ int main(int argc, char *argv[])
         glGenBuffers(objNum, floorVAO.roadVertexVBOs.data());
         glGenBuffers(objNum, floorVAO.roadColorVBOs.data());
         glGenBuffers(objNum, floorVAO.roadEBOs.data());
-        floorVAO.roadPointNums = HMIMap::bindRoadsData(hmi_map, floorName,
+        floorVAO.roadPointNums = hmi_map->bindRoadsData(floorName,
             floorVAO.roadVAOs, floorVAO.roadVertexVBOs, floorVAO.roadColorVBOs, floorVAO.roadEBOs);
 
         floorVAOs.push_back(floorVAO);

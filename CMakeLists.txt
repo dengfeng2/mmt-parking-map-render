@@ -9,7 +9,9 @@ add_subdirectory(libs/glad)
 add_subdirectory(libs/glm)
 add_subdirectory(libs/json)
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 add_subdirectory(src)
+
 
 
 

@@ -13,3 +13,5 @@ CMakeUserPresets.json
 cmake-build*
 **/.DS_Store
 .idea
+build
+_build
