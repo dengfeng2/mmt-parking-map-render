@@ -1,0 +1,638 @@
+syntax = "proto3";
+
+package hdmap.data.proto;
+
+message UrId {
+  uint32 id = 1;
+}
+
+message TileId {
+  uint32 id = 1;
+}
+
+message LanePortId {
+  TileId tile_id = 1;
+  uint32 count = 2;
+}
+
+message RoadPortId {
+  TileId tile_id = 1;
+  uint32 count = 2;
+}
+
+message RoadId {
+  TileId tile_id = 1;
+  uint32 count = 2;
+  UrId ur_id = 3;
+}
+
+message LaneGroupId {
+  RoadId road_id = 1;
+  bool dir_reversed = 2;
+  uint32 index = 3;
+}
+
+message LaneId {
+  LaneGroupId lane_group_id = 1;
+  uint32 index = 2;
+}
+message LaneBoundaryGroupId {
+  LaneGroupId lane_group_id = 1;
+  uint32 index = 2;
+}
+
+message ParallelLaneBoundaryId {
+  LaneBoundaryGroupId lane_boundary_group_id = 1;
+  uint32 index = 2;
+}
+
+message LaneBoundaryId {
+  ParallelLaneBoundaryId parallel_lane_boundary_id = 1;
+  uint32 index = 2;
+}
+
+message IntersectionId {
+  TileId tile_id = 1;
+  uint32 count = 2;
+  UrId ur_id = 3;
+}
+
+message AttributeId {
+  enum AttributeType {
+    UNKNOWN = 0;
+
+    // localization objects (1 - 50)
+    POLE = 1;
+    TRAFFIC_SIGN = 2;
+    DASHED_LINE_SEGEMENT = 3;
+
+    // guidance objects (51 - 100)
+    TRAFFIC_LIGHT = 51;
+    ROAD_MARK = 52;
+    ROAD_OBSTACLE = 53;
+    ROAD_FACILITY = 54;
+    LANE_MERGE_SPLIT = 55;
+    SPEED_LIMIT = 56;
+    DIVERGENT_POINT = 57;
+    MULTI_DIGITIZED = 58;
+    BUS_LANE = 59;
+    ROAD_PRIORITY = 60;
+
+    // poi-s (101 - 200)
+    POI = 101;
+    PARKING_SPACE = 102;
+    PARKING_LOT = 103;
+    PARKING_FACILITY = 104;
+
+    // experience (201 - 250)
+    EXPERIENCE_GUIDE_LINE = 201;
+    CROSS_LAYER_GROUP = 301;
+  }
+  AttributeType type = 1;
+  TileId tile_id = 2;
+  int32 count = 3;
+//  UrId ur_id = 4;
+}
+
+message Reference {
+  oneof binding {
+    RoadId road_id = 1;
+    LaneId lane_id = 2;
+    AttributeId attribute_id = 3;
+    RoadPortId road_port = 4;
+    LanePortId lane_port = 9;
+  }
+  enum Orientation {
+    // orientation denotes the attribute relative orientation of the element
+    UNKNOWN = 0;
+    LEFT = 1;
+    RIGHT = 2;
+    INTERSECT = 3;
+  }
+  float offset = 5;
+  float length = 6;
+  Orientation orientation = 7;
+  bool fully_covered = 8; // when it is true, the offset and length must no be used
+}
+
+message Strand {
+  message ObjId {
+    oneof _ {
+      RoadId road = 1;
+      RoadPortId road_port = 2;
+      LaneId lane = 3;
+      LanePortId lane_port = 4;
+    }
+  }
+  repeated ObjId objs = 1;
+}
+
+message Point {
+  double longitude = 1;
+  double latitude = 2;
+  double altitude = 3;
+}
+
+message Polyline {
+  repeated Point points = 1;
+  float length = 2;
+
+  // for optimize de-/serialize performance.
+  bytes buffer = 3;
+}
+
+message Polygon {
+  repeated Point shape = 1;
+
+  // for optimize de-/serialize performance.
+  bytes buffer = 2;
+}
+
+message SpeedLimit {
+  AttributeId id = 1;
+  repeated Reference ref = 3;
+  uint32 limit = 4;
+}
+
+message POI {
+  enum POIType {
+    UNKNOWN = 0;
+    BUS_STOP = 1;
+    BARRIER_GAP = 2;
+    // FLOORS = 3; => guidance_data::ParkingFacility
+    HUMAN_ACCESS = 4;
+    GARAGE_ENTRANCE = 5;
+    GARAGE_EXIT = 6;
+    FACILITY_ENTRANCE = 7;
+    FACILITY_EXIT = 8;
+    FACILITY_EXIT_AND_ENTRANCE = 9;
+    GARAGE_ENTRANCE_EXIT = 10;
+    MARKET_ENTRANCE = 11;
+    ELEVATOR_ENTRANCE = 12;
+    ESCALATOR_ENTRANCE = 13;
+    STOPPING_AREA = 14;
+    // SUB_REGION = 15; => guidance_data::ParkingFacility
+    EMERGENCY_PARKING_AREA = 16;
+    EMERGENCY_ESCAPE_AREA = 17;
+    TOLL_GATE = 18;
+    CHECK_POINT = 19;
+    SERVICE_AREA = 20;
+    CONSTRUCTION_AREA = 21;
+    PARK_INTERSECTION = 22; // 地库内路口
+    HILL = 23;  // 地库内坡道
+  };
+  AttributeId id = 1;
+  repeated Reference ref = 2;
+  POIType poi_type = 3;
+  repeated Point shape = 4;
+  string poi_name = 5;
+  bool is_valid = 6;
+}
+
+message TrafficLightGroup {
+  AttributeId id = 1;
+  repeated Reference ref = 2;
+  repeated TrafficLight traffic_lights = 3;
+}
+
+message TrafficLight {
+  enum LightType {
+    UNKNOWN = 0;
+    DOT_TRAFFIC_LIGHT = 1;
+    ARROW_TRAFFIC_LIGHT = 2;
+    NUMBER_TRAFFIC_LIGHT = 3;
+    TRAFFIC_LIGHT_FOR_NON_MOTOR_VEHICLE = 4;
+    TRAFFIC_LIGHT_FOR_PEDESTRIANS = 5;
+    SAND_CLOCK_TRAFFIC_LIGHT = 6;
+  };
+  AttributeId id = 1;
+  LightType light_type = 3;
+  repeated Lane.Direction direction = 4;
+  repeated Point obb = 5; // object bounding box.
+  Point geometry = 6;
+  bool is_portable = 7;
+}
+
+message RoadMark {
+  enum RoadMarkType {
+    UNKNOWN = 0;
+    SPEED_BUMP = 1;
+    STOP_LINE = 2;
+    GUIDE_ARROW = 3;
+    CROSSWALK = 4;
+    // DASHED_SEGMENT = 5; => localization_data::DashedLineEndpoints
+    CENTRAL_CIRCLE = 6;
+    NO_PARKING_ZONE = 7;
+    INDICATED_LINE = 8;
+    LATERAL_DECELERATION_MARKING = 9;
+    SYMBOL = 10;
+    TEXT = 11;
+  }
+  enum PaintingType{
+    PAINTINGTYPE_UNKNOWN = 0; // 未知
+    NORMAL = 1; // 常规类型
+    SPECIAL = 2; // 特殊类型
+  }
+  AttributeId id = 1;
+  RoadMarkType type = 3;
+  repeated Reference ref = 4;
+  repeated Point shape = 5;
+
+  // subtype only
+  // this field is optional, only valid for GUIDE_ARROW.
+  repeated Lane.Direction direction = 6;
+
+  PaintingType painting_type = 7; // 用于满足特殊斑马线的渲染需求
+}
+
+message RoadObstacle {
+  enum RoadObstacleType {
+    UNKNOWN = 0;
+    ISOLATION_ISLAND = 1;
+    SAFETY_ISLAND = 2;
+    PORTABLE_TRAFFIC_LIGHT = 3;
+    POLE_IN_ROAD = 4;
+    TRAFFIC_CONTROL_BOX = 5;
+    PILLAR = 6;
+    // for LPNP
+    WALL = 7;
+    FENCE = 8;
+    STEP = 9;
+    SPECIAL = 10;
+  }
+  AttributeId id = 1;
+  RoadObstacleType type = 3;
+  repeated Reference ref = 4;
+  repeated Point shape = 5;
+}
+
+message RoadFacility {
+  enum RoadFacilityType {
+    UNKNOWN = 0;
+    OVERHEAD_PASSAGE = 1;
+    GATE_MACHINE = 2;
+    GANTRY = 3;
+    BRIDGE_CONNECTION_UNIT = 4;
+  }
+  AttributeId id = 1;
+  RoadFacilityType type = 3;
+  repeated Reference ref = 4;
+  repeated Point shape = 5;
+}
+
+message ParkingLot {
+  enum ParkingLotType {
+    OUTDOOR = 0;
+    INDOOR = 1;
+    MIX = 2;
+  }
+  AttributeId id = 1;
+  ParkingLotType parking_lot_type = 2;
+  repeated Reference ref = 3;
+  repeated Point shape = 4;
+  int32 floors = 5;
+  string parking_lot_name = 6;
+  string address = 7;
+}
+
+message ParkingSpace {
+  enum ParkingSpaceType {
+    UNKNOWN = 0;
+    STANDARD = 1;
+    CHARGING =2;
+    WIRELESS_CHARGING = 3;
+  }
+  AttributeId id = 1;
+  ParkingSpaceType parking_space_type = 2;
+  repeated Reference ref = 3;
+  repeated Point shape = 4;
+  string floor_name = 5;
+  int32 empty_votes = 6;
+}
+
+message ParkingFacility {
+  enum ParkingFacilityType {
+    UNKNOWN = 0;
+    FLOORS = 1;
+    SUB_REGION =2;
+  }
+  AttributeId id = 1;
+  ParkingFacilityType parking_facility_type = 2;
+  repeated Reference ref = 3;
+  repeated Point shape = 4;
+  string parking_facility_name = 5;
+}
+
+message TurnRestriction {
+  Strand strand = 1;
+  Reference ref = 2; // referenced to a node
+}
+
+message ParallelLaneBoundary {
+  repeated LaneBoundary sequential_lane_boundaries = 1;
+  ParallelLaneBoundaryId id = 2;
+}
+
+message LaneBoundary {
+  enum LineType {
+    UNKNOWN = 0;
+    SOLID_LINE = 1;
+    DASHED_LINE = 2;
+    VIRTUAL = 14;
+    PHYSICAL = 15;
+    LOGICAL = 16;
+  };
+  enum BoundaryType {
+    UNKNOWN_TYPE = 0;
+    LANE_BORDER = 1;
+    ROAD_BORDER = 2;
+  };
+  enum Color {
+    UNKNOWN_COLOR = 0;
+    WHITE = 1;
+    YELLOW = 2;
+  };
+  enum Source{
+    auto_mapping = 0;
+    manual_valid = 1;
+    manual_guess = 2;
+    other = 3;
+  }
+  LaneBoundaryId id = 2;
+  LineType line_type = 3;
+  BoundaryType lane_boundary_type = 4;
+  Polyline geometry = 5;
+  Color color = 6;
+  Source source = 7;
+}
+
+message LaneBoundaryGroup {
+  LaneBoundaryGroupId id = 1;
+  repeated ParallelLaneBoundary parallel_lane_boundaries = 2;
+}
+
+message LanePort {
+  LanePortId id = 1;
+  repeated LaneId lanes_in = 2;
+  repeated LaneId lanes_out = 3;
+  // angle定义：以正东为正方向; 逆时针为正，顺时针为负; (-pi, pi]; 单位保留到千分之一弧度；
+  // 这里lanes_angle_in中对应的road的顺序，与对于roads_in一致
+  repeated int32 lanes_angle_in = 4;
+  repeated int32 lanes_angle_out = 5;
+}
+
+message Lane {
+  enum LaneType {
+    NORMAL = 0;
+    ACCELERATE = 1;
+    DECELERATE = 2;
+    BUS = 3;
+    EMERGENCY = 4;
+    ACC_DEC = 5;
+    LEFT_TURN_WAITING_AREA = 6;
+    PARKING = 7;
+    TIDAL = 8;
+    NON_MOTOR = 9;
+    TOLL_ETC = 10;
+    TOLL_MANUAL = 11;
+    TOLL = 12;
+    VARIABLE = 13;
+    HOV = 14;
+  };
+  enum Direction {
+    UNKNOWN = 0;
+    GO_STRAIGHT = 1;
+    TURN_RIGHT = 2;
+    TURN_LEFT = 3;
+    U_TURN_LEFT = 4;
+    U_TURN_RIGHT = 5;
+    LEFT_CONFLUENCE = 6;
+    RIGHT_CONFLUENCE = 7;
+  };
+  LaneId id = 2;
+  LaneType lane_type = 3;
+  Polyline center_line = 4; // * optimize
+  LaneBoundaryGroupId left_boundary_group = 6;
+  LaneBoundaryGroupId right_boundary_group = 7;
+  LanePortId head_id = 8;
+  LanePortId tail_id = 9;
+  repeated Direction direction = 10; // directions from the lane guide arrow
+}
+
+message LaneGroup {
+  LaneGroupId id = 2;
+  float length = 3;
+  uint32 num_lanes = 4;
+  repeated Lane lanes = 5;
+  repeated LaneBoundaryGroup lane_boundary_groups = 6;
+}
+
+message SegmentForLane {
+  message Segment {
+    uint32 start_index = 1;
+    uint32 end_index = 2;
+    float length = 3;
+  }
+  LaneId lane_id = 1;
+  repeated Segment segs = 2;
+}
+
+message RoadPriority {
+  enum PrioritySignType {
+    UNKNOWN = 0; // 未知
+    PRIORITY_ROAD = 1; // 黄色菱形先行权标志
+    PRIORITY_ROAD_END = 2;  // 黄色菱形加三条斜线标志
+    PRIORITY_AUXILIARY = 3;  // 辅助先行权标志
+    PRIORITY_NEXT_INTERSECTION = 4;  //下一个路口先行权标志
+    STOP = 5; //停止并让行
+    YIELD = 6; // 让行标志(倒三角)
+    PRIORITY_OVER_ONCOMING = 7; //会车先行
+    YIELD_TO_ONCOMING = 8; //会车让行
+  }
+  AttributeId id = 1;
+  repeated Reference ref = 2; // 引用的道路id
+  PrioritySignType priority_sign_type = 3; // 路权牌类型
+}
+
+message RoadPort {
+  RoadPortId id = 1;
+  repeated RoadId roads_in = 3;
+  repeated RoadId roads_out = 4;
+  repeated LanePortId lane_port_ab_ids = 5;
+  repeated LanePortId lane_port_ba_ids = 6;
+  // angle定义：以正东为正方向; 逆时针为正，顺时针为负; (-pi, pi]; 单位保留到千分之一弧度；
+  // 这里roads_angle_in中对应的road的顺序，与对于roads_in一致
+  repeated int32 roads_angle_in = 7;
+  repeated int32 roads_angle_out = 8;
+}
+
+message Road {
+  enum RoadClass {
+    ROAD_CLASS_UNKNOWN = 0;
+    HIGHWAY = 1;
+    URBAN = 2;
+    CITY_EXPRESSWAY=3;
+  };
+  enum RoadStructure {
+    ROAD_STRUCTURE_UNKNOWN = 0;
+    TUNNEL = 1;
+    TOLL = 2;
+    BRIDGE = 3;
+    ROUNDABOUT = 4; // 环岛
+  };
+  enum RoadType {
+    ROAD_TYPE_UNKNOWN = 0;
+    U_TURN = 1; // TURN_BACK_ROAD
+    INTERSECTION_LEFT_TURN = 2;
+    SEPARATE_TURN_RIGHT = 3; // TURN_RIGHT_ROAD
+    SEPARATE_TURN_LEFT = 4; // TURN_LEF_ROAD
+  };
+  enum TravelDirection {
+    UNKNOWN = 0;
+    NONE = 1;
+    A_B = 2; // positive
+    B_A = 3; // negative
+    BOTH = 4;
+  };
+  enum Ramp {
+    NOT = 0;
+    IC = 1;
+    JCT = 2;
+    SAPA = 3;
+    PARKING_RAMP = 4;
+  };
+  RoadId id = 1;
+  RoadPortId head_id = 3;
+  RoadPortId tail_id = 4;
+  float length = 5;
+  RoadType road_type = 6; // ! NOTE: what's this
+  Polyline road_center = 7;
+  TravelDirection travel_direction = 8;
+  repeated LaneGroup lane_group_ab = 9;
+  repeated LaneGroup lane_group_ba = 10;
+  Ramp ramp = 11;
+  string name = 13;
+  RoadClass road_class = 14;
+  repeated RoadStructure road_structure = 15;
+  bool intersection_internal = 16;
+  IntersectionId intersection_id = 17;
+}
+
+message Intersection {
+  enum IntersectionType {
+    UNKNOWN = 0;
+    HIGHWAY_SPLIT = 1;
+    URBAN_NORMAL = 2;
+  };
+  IntersectionId id = 1;
+  IntersectionType intersection_type = 2;
+  repeated RoadId road_ids = 3;
+  Polygon bound = 4;
+  repeated LaneBoundary boundaries = 5;
+  // Waiting area could be an attribute or an event to this.
+}
+
+message LaneMergeSplit {
+  AttributeId id = 1;
+  LaneId lane_id = 3;
+  float offset = 4;
+  bool is_merge = 5;
+}
+
+message MultiDigitized {
+  enum MDType {
+    UNKNOWN = 0;
+    LEFT_FORWARD = 1;
+    LEFT_RESERVE = 2;
+    RIGHT_FORWARD = 3;
+    RIGHT_RESERVE = 4;
+    RESERVE_OVERLAP = 5;
+  }
+  AttributeId id = 1;
+  RoadId road_cur = 2;
+  repeated RoadId roads_opposite = 3;
+  MDType multi_digitized_type = 4;
+}
+
+message DivergentPoint {
+  AttributeId id = 1;
+  LaneId c_lane = 2;
+  Point c_point = 3;
+  LanePortId b = 4;
+  RoadPortId d = 5;
+}
+
+message ExperienceTrajectoryForLane {
+  message Trajectory {
+    Polyline geometry = 1;
+    repeated double instance_speed_list = 2;
+    double max_speed = 3;
+  }
+  LaneId lane_id = 1;
+  repeated Trajectory experience_trajectory_list = 2;
+}
+
+// Additional width information for lane, the width_list has the same length with the lane it references.
+message WidthForLane {
+  LaneId lane_id = 1;
+  repeated double width_list = 2;
+}
+
+// Additional curvature information for lane, the curvature_list has the same length with the lane it references.
+message CurvatureForLane {
+  LaneId lane_id = 1;
+  repeated double curvature_list = 2;
+}
+
+// Additional yaw information for lane, the yaw_list has the same length with the lane it references.
+message YawForLane {
+  LaneId lane_id = 1;
+  repeated double yaw_list = 2;
+}
+
+// Additional vertical slope information for lane, the vertical_slope_list has the same length with the lane it references.
+message VerticalSlopeForLane {
+  LaneId lane_id = 1;
+  repeated double vertical_slope_list = 2;
+}
+
+// Additional horizontal slope information for lane, the horizontal_slope_list has the same length with the lane it references.
+message HorizontalSlopeForLane {
+  LaneId lane_id = 1;
+  repeated double horizontal_slope_list = 2;
+}
+
+message RoadTile {
+    TileId id = 1;
+    // base data
+    repeated RoadPort road_port = 10;
+    repeated Road road = 11;
+    repeated Intersection intersection = 12;
+    repeated LanePort lane_port = 13; // lane connector and node should be known as global information.
+
+    // routing
+    repeated MultiDigitized multi_digitized = 20;
+    repeated LaneMergeSplit lane_merge_split = 21;
+    repeated DivergentPoint divergent_point = 22;
+    repeated SegmentForLane segment_for_lane = 23;
+    repeated ExperienceTrajectoryForLane experience_trajectory_for_lane = 24;
+
+    // adas
+    repeated WidthForLane width_for_lane = 50;
+    repeated CurvatureForLane curvature_for_lane = 51;
+    repeated YawForLane yaw_for_lane = 52;
+    repeated VerticalSlopeForLane slope_for_lane = 53;
+    repeated HorizontalSlopeForLane horizontal_slope_list = 54; // 车道级横坡
+
+    // guidance
+    repeated SpeedLimit speed_limit = 100;
+    repeated POI poi = 101;
+    repeated TrafficLightGroup traffic_light_group = 102;
+    repeated RoadMark road_mark = 103;
+    repeated RoadObstacle road_obstacle = 104;
+    repeated RoadFacility road_facility = 105;
+    repeated ParkingLot parking_lot = 106;
+    repeated ParkingSpace parking_space = 107;
+    repeated ParkingFacility parking_facility = 108;
+    repeated RoadPriority road_priority = 109;
+}
