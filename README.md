@@ -3,6 +3,7 @@ MMT泊车地图渲染
 
 使用方式：
 ```shell
+git clone https://github.com/dengfeng2/mmt-parking-map-render.git --recursive
 cd mmt-parking-map-render
 mkdir build
 cd build
